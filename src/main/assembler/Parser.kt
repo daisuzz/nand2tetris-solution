@@ -1,32 +1,31 @@
-package main.assembler
+package assembler
 
-import assembler.CommandType
 import java.io.BufferedReader
+import java.io.File
 
 /**
  * アセンブリコマンドを基本要素(フィールド, シンボル)に分解するモジュール
  */
-class Parser(private val br: BufferedReader) {
+class Parser(file: File) {
+
+    private val br: BufferedReader = if (file.exists()) file.bufferedReader() else throw IllegalArgumentException("invalid file path!")
 
     private var currentCommand = ""
 
-    private var nextCommand: String? = ""
+    private var nextCommand: String = ""
 
     /**
      * 入力にまだコマンドが存在するかどうか。
      */
     fun hasMoreCommands(): Boolean {
-
-        nextCommand = br.readLine()
-        if(nextCommand == null) return false
-
-        // コメントもしくは空行の場合、末尾もしくはコマンドを読み込むまで、次の行を読み込み続ける
-        while (nextCommand == "" || nextCommand!!.contains("//")) {
-            nextCommand = br.readLine()
-            if(nextCommand == null) break
-            if (nextCommand!!.contains("//")) nextCommand = ""
+        var line = br.readLine() ?: return false
+        nextCommand = trimAllWhiteSpace(line.substringBefore("//"))
+        // コメント行もしくは空行の場合、コマンドを読み込むまで、次の行を読み込み続ける
+        while (nextCommand.isEmpty()) {
+            line = br.readLine() ?: return false
+            nextCommand = trimAllWhiteSpace(line.substringBefore("//"))
         }
-        return nextCommand != null
+        return true
     }
 
     /**
@@ -55,7 +54,9 @@ class Parser(private val br: BufferedReader) {
      * commandType()がA_COMMAND, L_COMMANDを返すときだけ呼ばれる
      */
     fun symbol(): String {
-        return currentCommand.substring(1 until currentCommand.length)
+        // @から始まるときは末尾まで読み込む, (から始まるときは末尾の)は読み込まない
+        val end = if (currentCommand[0] == '@') currentCommand.length else currentCommand.length - 1
+        return currentCommand.substring(1 until end)
     }
 
     /**
@@ -83,7 +84,7 @@ class Parser(private val br: BufferedReader) {
         return currentCommand.substringAfter(';', "")
     }
 
-    private fun trimAllWhiteSpace(str: String?): String{
+    private fun trimAllWhiteSpace(str: String?): String {
         return str?.replace("\\s".toRegex(), "") ?: throw NullPointerException()
     }
 }
