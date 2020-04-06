@@ -3,19 +3,33 @@ package vmtranslator
 import java.io.File
 
 fun main(args: Array<String>) {
-    val inputFilePath = args[0]
-    val inputFile = File(inputFilePath)
+    val sourcePath = args[0].trimEnd('/')
+    val source = File(sourcePath)
 
-    val outputFilePath = inputFilePath.substringBeforeLast(".") + ".asm"
+    val outputFilePath =
+        if (source.isFile) sourcePath.substringBeforeLast(".") + ".asm" else sourcePath.substringAfterLast("/") + ".asm"
     val outputFile = File(outputFilePath)
     if (outputFile.exists()) outputFile.delete()
 
-    val parser = Parser(inputFile)
     val codeWriter = CodeWriter(outputFile)
 
-    val inputFileName = inputFilePath.substringAfterLast("/").substringBeforeLast(".")
-    codeWriter.setFileName(inputFileName)
+    if (source.isFile) {
+        val parser = Parser(source)
+        val inputFileName = sourcePath.substringAfterLast("/").substringBeforeLast(".")
+        codeWriter.setFileName(inputFileName)
+        translate(parser, codeWriter)
+    } else {
+        val vmFiles = source.listFiles { file -> file.extension == "vm" }
+        if (!vmFiles.isNullOrEmpty()) {
+            vmFiles.forEach { vmfile ->
+                val parser = Parser(vmfile)
+                translate(parser, codeWriter)
+            }
+        }
+    }
+}
 
+fun translate(parser: Parser, codeWriter: CodeWriter) {
     loop@ while (parser.hasMoreCommands()) {
         parser.advance()
 
@@ -54,5 +68,4 @@ fun main(args: Array<String>) {
             }
         }
     }
-
 }
