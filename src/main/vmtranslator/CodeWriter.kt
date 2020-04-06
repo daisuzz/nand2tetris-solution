@@ -58,13 +58,17 @@ class CodeWriter(private val file: File) {
      */
     fun writePushPop(command: String, segment: String, index: Int) {
         val assemblyCode = if (command == "push") {
-            if (segment == "constant") {
-                pushConst(index) + incrementSP()
-            } else {
-                TODO()
+            when (segment) {
+                "constant" -> pushConst(index)
+                "argument", "local", "this", "that" -> pushSegment(segment, index)
+                "pointer", "temp" -> pushTempOrPointer(segment, index)
+                else -> throw IllegalArgumentException()
             }
         } else {
-            TODO()
+            when (segment) {
+                "argument", "local", "this", "that", "pointer", "temp" -> popToSegment(segment, index)
+                else -> throw IllegalArgumentException()
+            }
         }
 
         file.appendText(assemblyCode)
@@ -77,14 +81,72 @@ class CodeWriter(private val file: File) {
     fun close() {}
 
     private fun loadSP() = "@SP\nA=M\n"
+    private fun loadArg() = "@ARG\nA=M+D\nD=M\n"
+    private fun loadLcl() = "@LCL\nA=M+D\nD=M\n"
+    private fun loadThis() = "@THIS\nA=M+D\nD=M\n"
+    private fun loadThat() = "@THAT\nA=M+D\nD=M\n"
+    private fun loadPointer(index: Int) = "@${3 + index}\nD=M\n"
+    private fun loadTemp(index: Int) = "@${5 + index}\nD=M\n"
+    private fun loadArgAddr() = "@ARG\nD=M+D\n"
+    private fun loadLclAddr() = "@LCL\nD=M+D\n"
+    private fun loadThisAddr() = "@THIS\nD=M+D\n"
+    private fun loadThatAddr() = "@THAT\nD=M+D\n"
+    private fun loadPointerAddr() = "@3\nD=A+D\n"
+    private fun loadTempAddr() = "@5\nD=A+D\n"
+    private fun loadRegister(register: String) = "@$register\nA=M\n"
+
+    private fun setToRegister(register: String) = "@${register}\nM=D\n"
+
     private fun incrementSP() = "@SP\nM=M+1\n"
     private fun decrementSP() = "@SP\nM=M-1\n"
+
+    private fun popToSegment(segment: String, index: Int): String {
+        val command = when (segment) {
+            "argument" -> loadArgAddr()
+            "local" -> loadLclAddr()
+            "this" -> loadThisAddr()
+            "that" -> loadThatAddr()
+            "pointer" -> loadPointerAddr()
+            "temp" -> loadTempAddr()
+            else -> IllegalArgumentException()
+        }
+        return defIndex(index) + command + setToRegister("R13") + decrementSP() + loadSP() + pop() + loadRegister("R13") + "M=D\n"
+    }
+
     private fun pop() = "D=M\nM=0\n"
-    private fun defConst(const: Int) = "@$const\nD=A\n"
-    private fun pushConst(const: Int) = defConst(const) + loadSP() + "M=D\n"
+
+    private fun defIndex(index: Int) = "@$index\nD=A\n"
+    private fun pushConst(const: Int) = defIndex(const) + push() + incrementSP()
+    private fun pushSegment(segment: String, index: Int): String {
+        val command = when (segment) {
+            "argument" -> loadArg()
+            "local" -> loadLcl()
+            "this" -> loadThis()
+            "that" -> loadThat()
+            else -> throw IllegalArgumentException()
+        }
+
+        return defIndex(index) + command + push() + incrementSP()
+    }
+
+    private fun pushTempOrPointer(segment: String, index: Int): String {
+        val command = when (segment) {
+            "pointer" -> loadPointer(index)
+            "temp" -> loadTemp(index)
+            else -> throw IllegalArgumentException()
+        }
+
+        return command + push() + incrementSP()
+    }
+
+    private fun push() = loadSP() + "M=D\n"
+
     private fun add() = "M=M+D\n"
     private fun sub() = "M=M-D\n"
     private fun neg() = "M=-M\n"
+    private fun and() = "M=D&M\n"
+    private fun or() = "M=D|M\n"
+    private fun not() = "M=!M\n"
     private fun eq(): String {
         val command =
             "D=M-D\n@EQ$eqNum\nD;JEQ\n@NEQ$eqNum\n0;JMP\n(EQ$eqNum)\n${loadSP()}M=-1\n@EQNEXT$eqNum\n0;JMP\n(NEQ$eqNum)\n${loadSP()}M=0\n@EQNEXT$eqNum\n0;JMP\n(EQNEXT$eqNum)\n"
@@ -105,9 +167,4 @@ class CodeWriter(private val file: File) {
         ltNum++
         return command
     }
-
-    private fun and() = "M=D&M\n"
-    private fun or() = "M=D|M\n"
-    private fun not() = "M=!M\n"
-
 }

@@ -16,15 +16,20 @@ fun main(args: Array<String>) {
     loop@ while (parser.hasMoreCommands()) {
         parser.advance()
 
-        when (parser.commandType()) {
+        when (val commandType = parser.commandType()) {
             CommandType.C_ARITHMETIC -> {
                 val command = parser.arg1()
                 codeWriter.writeArithmetic(command)
             }
-            CommandType.C_PUSH, CommandType.C_POP -> {
+            CommandType.C_PUSH -> {
                 val segment = parser.arg1()
                 val index = parser.arg2()
                 codeWriter.writePushPop("push", segment, index)
+            }
+            CommandType.C_POP -> {
+                val segment = parser.arg1()
+                val index = parser.arg2()
+                codeWriter.writePushPop("pop", segment, index)
             }
             CommandType.C_LABEL -> {
                 TODO()
