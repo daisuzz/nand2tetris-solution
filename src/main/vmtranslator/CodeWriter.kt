@@ -8,11 +8,13 @@ class CodeWriter(private val file: File) {
     private var gtNum = 0
     private var ltNum = 0
 
+    private var fileName = ""
+
     /**
      * 新しいVMファイルの変換が開始したことを知らせる
      */
     fun setFileName(fileName: String) {
-        TODO()
+        this.fileName = fileName
     }
 
     /**
@@ -62,11 +64,13 @@ class CodeWriter(private val file: File) {
                 "constant" -> pushConst(index)
                 "argument", "local", "this", "that" -> pushSegment(segment, index)
                 "pointer", "temp" -> pushTempOrPointer(segment, index)
+                "static" -> pushStatic(index)
                 else -> throw IllegalArgumentException()
             }
         } else {
             when (segment) {
                 "argument", "local", "this", "that", "pointer", "temp" -> popToSegment(segment, index)
+                "static" -> popToStatic(index)
                 else -> throw IllegalArgumentException()
             }
         }
@@ -100,6 +104,8 @@ class CodeWriter(private val file: File) {
     private fun incrementSP() = "@SP\nM=M+1\n"
     private fun decrementSP() = "@SP\nM=M-1\n"
 
+    private fun defIndex(index: Int) = "@$index\nD=A\n"
+
     private fun popToSegment(segment: String, index: Int): String {
         val command = when (segment) {
             "argument" -> loadArgAddr()
@@ -113,10 +119,15 @@ class CodeWriter(private val file: File) {
         return defIndex(index) + command + setToRegister("R13") + decrementSP() + loadSP() + pop() + loadRegister("R13") + "M=D\n"
     }
 
+    private fun popToStatic(index: Int): String {
+        return decrementSP() + loadSP() + pop() + "@$fileName.$index\nM=D\n"
+
+    }
+
     private fun pop() = "D=M\nM=0\n"
 
-    private fun defIndex(index: Int) = "@$index\nD=A\n"
     private fun pushConst(const: Int) = defIndex(const) + push() + incrementSP()
+
     private fun pushSegment(segment: String, index: Int): String {
         val command = when (segment) {
             "argument" -> loadArg()
@@ -138,6 +149,8 @@ class CodeWriter(private val file: File) {
 
         return command + push() + incrementSP()
     }
+
+    private fun pushStatic(index: Int) = "@$fileName.$index\nD=M\n" + push() + incrementSP()
 
     private fun push() = loadSP() + "M=D\n"
 

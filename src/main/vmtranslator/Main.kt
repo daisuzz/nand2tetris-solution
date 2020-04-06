@@ -13,6 +13,9 @@ fun main(args: Array<String>) {
     val parser = Parser(inputFile)
     val codeWriter = CodeWriter(outputFile)
 
+    val inputFileName = inputFilePath.substringAfterLast("/").substringBeforeLast(".")
+    codeWriter.setFileName(inputFileName)
+
     loop@ while (parser.hasMoreCommands()) {
         parser.advance()
 
