@@ -79,6 +79,58 @@ class CodeWriter(private val file: File) {
     }
 
     /**
+     * VMの初期化を行うアセンブリコードをファイルに書き込む
+     */
+    fun writeInit() {
+        TODO()
+    }
+
+    /**
+     * labelコマンドをアセンブリコードに変換し、ファイルに書き込む
+     */
+    fun writeLabel(label: String) {
+        val assemblyCode = "($fileName$$label)\n"
+        file.appendText(assemblyCode)
+    }
+
+    /**
+     * gotoコマンドをアセンブリコードに変換し、ファイルに書き込む
+     */
+    fun writeGoto(label: String) {
+        val assemblyCode = "@$fileName$$label\n0;JMP\n"
+        file.appendText(assemblyCode)
+    }
+
+    /**
+     * if-gotoコマンドをアセンブリコードに変換し、ファイルに書き込む
+     */
+    fun writeIf(label: String) {
+        val assemblyCode = decrementSP() + loadSP() + pop() + "@$fileName$$label\nD;JNE\n"
+        file.appendText(assemblyCode)
+    }
+
+    /**
+     * callコマンドをアセンブリコードに変換し、ファイルに書き込む
+     */
+    fun writeCall(functionName: String, numArgs: Int) {
+        TODO()
+    }
+
+    /**
+     * returnコマンドをアセンブリコードに変換し、ファイルに書き込む
+     */
+    fun writeReturn() {
+        TODO()
+    }
+
+    /**
+     * functionコマンドをアセンブリコードに変換し、ファイルに書き込む
+     */
+    fun writeFunction(functionName: String, numLocals: Int) {
+        TODO()
+    }
+
+    /**
      * 出力ファイルを閉じる
      * KotlinのFile::appendText()メソッドの中で書き込みと同時にclose処理をおこなっているので今回は実装しない
      */

@@ -49,13 +49,16 @@ fun translate(parser: Parser, codeWriter: CodeWriter) {
                 codeWriter.writePushPop("pop", segment, index)
             }
             CommandType.C_LABEL -> {
-                TODO()
+                val label = parser.arg1()
+                codeWriter.writeLabel(label)
             }
             CommandType.C_GOTO -> {
-                TODO()
+                val label = parser.arg1()
+                codeWriter.writeGoto(label)
             }
             CommandType.C_IF -> {
-                TODO()
+                val label = parser.arg1()
+                codeWriter.writeIf(label)
             }
             CommandType.C_FUNCTION -> {
                 TODO()
@@ -69,3 +72,5 @@ fun translate(parser: Parser, codeWriter: CodeWriter) {
         }
     }
 }
+
+
