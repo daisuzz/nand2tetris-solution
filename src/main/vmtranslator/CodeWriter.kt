@@ -12,6 +12,18 @@ class CodeWriter(private val file: File) {
 
     private var returnAddressCounter = 0
 
+    private val arithmeticMap = mapOf(
+        "add" to "M=M+D",
+        "sub" to "M=M-D",
+        "neg" to "M=-M",
+        "and" to "M=M&D",
+        "or" to "M=M|D",
+        "not" to "M=!M",
+        "eq" to eq(),
+        "gt" to gt(),
+        "lt" to lt()
+    )
+
     /**
      * 新しいVMファイルの変換が開始したことを知らせる
      */
@@ -22,37 +34,9 @@ class CodeWriter(private val file: File) {
     /**
      * 与えられた算術コマンドをアセンブリコードに変換し、ファイルに書き込む
      */
-    fun writeArithmetic(command: String) {
-        val assemblyCode = when (command) {
-            "add" -> {
-                pop() + decrementSP() + loadSP() + add() + incrementSP()
-            }
-            "sub" -> {
-                pop() + decrementSP() + loadSP() + sub() + incrementSP()
-            }
-            "neg" -> {
-                decrementSP() + loadSP() + neg() + incrementSP()
-            }
-            "eq" -> {
-                pop() + decrementSP() + loadSP() + eq() + incrementSP()
-            }
-            "gt" -> {
-                pop() + decrementSP() + loadSP() + gt() + incrementSP()
-            }
-            "lt" -> {
-                pop() + decrementSP() + loadSP() + lt() + incrementSP()
-            }
-            "and" -> {
-                pop() + decrementSP() + loadSP() + and() + incrementSP()
-            }
-            "or" -> {
-                pop() + decrementSP() + loadSP() + or() + incrementSP()
-            }
-            "not" -> {
-                decrementSP() + loadSP() + not() + incrementSP()
-            }
-            else -> throw IllegalArgumentException()
-        }
+    fun writeArithmetic(operator: String) {
+        val commands = arithmeticMap[operator] ?: throw IllegalArgumentException()
+        val assemblyCode = genLine(pop(), decrementSP(), loadSP(), commands, incrementSP())
 
         file.appendText(assemblyCode)
     }
@@ -66,13 +50,13 @@ class CodeWriter(private val file: File) {
                 "constant" -> pushConst(index)
                 "argument", "local", "this", "that" -> pushSegment(segment, index)
                 "pointer", "temp" -> pushTempOrPointer(segment, index)
-                "static" -> pushStatic(index)
+                "static" -> genLine("@$fileName.$index", "D=M", push())
                 else -> throw IllegalArgumentException()
             }
         } else {
             when (segment) {
                 "argument", "local", "this", "that", "pointer", "temp" -> popToSegment(segment, index)
-                "static" -> popToStatic(index)
+                "static" -> genLine(pop(), "@$fileName.$index", "M=D")
                 else -> throw IllegalArgumentException()
             }
         }
@@ -84,7 +68,7 @@ class CodeWriter(private val file: File) {
      * VMの初期化を行うアセンブリコードをファイルに書き込む
      */
     fun writeInit() {
-        var assemblyCode = "@256\nD=A\n@SP\nM=D\n"
+        val assemblyCode = genLine("@256", "D=A", "@SP", "M=D")
 
         file.appendText(assemblyCode)
         writeCall("Sys.init", 0)
@@ -94,7 +78,7 @@ class CodeWriter(private val file: File) {
      * labelコマンドをアセンブリコードに変換し、ファイルに書き込む
      */
     fun writeLabel(label: String) {
-        val assemblyCode = "($fileName$$label)\n"
+        val assemblyCode = genLine("($fileName$$label)")
         file.appendText(assemblyCode)
     }
 
@@ -102,7 +86,7 @@ class CodeWriter(private val file: File) {
      * gotoコマンドをアセンブリコードに変換し、ファイルに書き込む
      */
     fun writeGoto(label: String) {
-        val assemblyCode = "@$fileName$$label\n0;JMP\n"
+        val assemblyCode = genLine("@$fileName$$label", "0;JMP")
         file.appendText(assemblyCode)
     }
 
@@ -110,7 +94,7 @@ class CodeWriter(private val file: File) {
      * if-gotoコマンドをアセンブリコードに変換し、ファイルに書き込む
      */
     fun writeIf(label: String) {
-        val assemblyCode = pop() + "@$fileName$$label\nD;JNE\n"
+        val assemblyCode = genLine(pop(), "@$fileName$$label", "D;JNE")
         file.appendText(assemblyCode)
     }
 
@@ -118,7 +102,7 @@ class CodeWriter(private val file: File) {
      * functionコマンドをアセンブリコードに変換し、ファイルに書き込む
      */
     fun writeFunction(functionName: String, numLocals: Int) {
-        var assemblyCode = "($functionName)\n"
+        var assemblyCode = genLine("($functionName)")
         (0 until numLocals).forEach { _ ->
             assemblyCode += pushConst(0)
         }
@@ -133,23 +117,23 @@ class CodeWriter(private val file: File) {
         var assemblyCode = ""
 
         // push return-address
-        assemblyCode += "@return-address$returnAddressCounter\nD=A\n" + push()
+        assemblyCode += genLine("@return-address$returnAddressCounter", "D=A", push())
         // push LCL
-        assemblyCode += "@LCL\nD=M\n" + push()
+        assemblyCode += genLine("@LCL", "D=M", push())
         // push ARG
-        assemblyCode += "@ARG\nD=M\n" + push()
+        assemblyCode += genLine("@ARG", "D=M", push())
         // push THIS
-        assemblyCode += "@THIS\nD=M\n" + push()
+        assemblyCode += genLine("@THIS", "D=M", push())
         // push THAT
-        assemblyCode += "@THAT\nD=M\n" + push()
+        assemblyCode += genLine("@THAT", "D=M", push())
         // ARG = SP-n-5
-        assemblyCode += "@SP\nD=M\n@$numArgs\nD=D-A\n@5\nD=D-A\n@ARG\nM=D\n"
+        assemblyCode += genLine("@SP", "D=M", "@$numArgs", "D=D-A", "@5", "D=D-A", "@ARG", "M=D")
         // LCL = SP
-        assemblyCode += "@SP\nD=M\n@LCL\nM=D\n"
+        assemblyCode += genLine("@SP", "D=M", "@LCL", "M=D")
         // goto f
-        assemblyCode += "@$functionName\n0;JMP\n"
+        assemblyCode += genLine("@$functionName", "0;JMP")
         // (return-address)
-        assemblyCode += "(return-address$returnAddressCounter)\n"
+        assemblyCode += genLine("(return-address$returnAddressCounter)")
 
         file.appendText(assemblyCode)
 
@@ -163,31 +147,31 @@ class CodeWriter(private val file: File) {
         var assemblyCode = ""
 
         // FRAMEのベースアドレスをLCLから取得
-        assemblyCode += "@LCL\nD=M\n@frame\nM=D\n"
+        assemblyCode += genLine("@LCL", "D=M", "@frame", "M=D")
 
         // リターンアドレスをLCLから取得
-        assemblyCode += "@5\nD=A\n@frame\nA=M-D\nD=M\n@ret\nM=D\n"
+        assemblyCode += genLine("@5", "D=A", "@frame", "A=M-D", "D=M", "@ret", "M=D")
 
         // 関数の戻り値を呼び出し元のスタックに格納(argument[0]は呼び出し元ではスタックの最上位になる)
-        assemblyCode += pop() + "@ARG\nA=M\nM=D\n"
+        assemblyCode += genLine(pop() + "@ARG", "A=M", "M=D")
 
         // SPを呼び出し元のSPに戻す
-        assemblyCode += "@ARG\nD=M\n@SP\nM=D+1\n"
+        assemblyCode += genLine("@ARG", "D=M", "@SP", "M=D+1")
 
         // THATを呼び出し元のTHATに戻す
-        assemblyCode += "@frame\nA=M-1\nD=M\n@THAT\nM=D\n"
+        assemblyCode += genLine("@frame", "A=M-1", "D=M", "@THAT", "M=D")
 
         // THISを呼び出し元のTHISに戻す
-        assemblyCode += "@2\nD=A\n@frame\nA=M-D\nD=M\n@THIS\nM=D\n"
+        assemblyCode += genLine("@2", "D=A", "@frame", "A=M-D", "D=M", "@THIS", "M=D")
 
         // ARGを呼び出し元のARGに戻す
-        assemblyCode += "@3\nD=A\n@frame\nA=M-D\nD=M\n@ARG\nM=D\n"
+        assemblyCode += genLine("@3", "D=A", "@frame", "A=M-D", "D=M", "@ARG", "M=D")
 
         // LCLを呼び出し元のLCLに戻す
-        assemblyCode += "@4\nD=A\n@frame\nA=M-D\nD=M\n@LCL\nM=D\n"
+        assemblyCode += genLine("@4", "D=A", "@frame", "A=M-D", "D=M", "@LCL", "M=D")
 
         // リターンアドレスにjump
-        assemblyCode += "@ret\nA=M\n0;JMP\n"
+        assemblyCode += genLine("@ret", "A=M", "0;JMP")
 
         file.appendText(assemblyCode)
     }
@@ -198,97 +182,118 @@ class CodeWriter(private val file: File) {
      */
     fun close() {}
 
-    private fun loadSP() = "@SP\nA=M\n"
-    private fun loadArg() = "@ARG\nA=M+D\nD=M\n"
-    private fun loadLcl() = "@LCL\nA=M+D\nD=M\n"
-    private fun loadThis() = "@THIS\nA=M+D\nD=M\n"
-    private fun loadThat() = "@THAT\nA=M+D\nD=M\n"
-    private fun loadPointer(index: Int) = "@${3 + index}\nD=M\n"
-    private fun loadTemp(index: Int) = "@${5 + index}\nD=M\n"
-    private fun loadArgAddr() = "@ARG\nD=M+D\n"
-    private fun loadLclAddr() = "@LCL\nD=M+D\n"
-    private fun loadThisAddr() = "@THIS\nD=M+D\n"
-    private fun loadThatAddr() = "@THAT\nD=M+D\n"
-    private fun loadPointerAddr() = "@3\nD=A+D\n"
-    private fun loadTempAddr() = "@5\nD=A+D\n"
-    private fun loadRegister(register: String) = "@$register\nA=M\n"
-
-    private fun setToRegister(register: String) = "@${register}\nM=D\n"
-
-    private fun incrementSP() = "@SP\nM=M+1\n"
-    private fun decrementSP() = "@SP\nM=M-1\n"
-
-    private fun defIndex(index: Int) = "@$index\nD=A\n"
+    private fun loadSP() = genLine("@SP", "A=M")
+    private fun incrementSP() = genLine("@SP", "M=M+1")
+    private fun decrementSP() = genLine("@SP", "M=M-1")
+    private fun pop() = genLine(decrementSP(), loadSP(), "D=M", "M=0")
+    private fun push() = genLine(loadSP(), "M=D", incrementSP())
 
     private fun popToSegment(segment: String, index: Int): String {
         val command = when (segment) {
-            "argument" -> loadArgAddr()
-            "local" -> loadLclAddr()
-            "this" -> loadThisAddr()
-            "that" -> loadThatAddr()
-            "pointer" -> loadPointerAddr()
-            "temp" -> loadTempAddr()
-            else -> IllegalArgumentException()
+            "argument" -> genLine("@ARG", "D=M+D")
+            "local" -> genLine("@LCL", "D=M+D")
+            "this" -> genLine("@THIS", "D=M+D")
+            "that" -> genLine("@THAT", "D=M+D")
+            "pointer" -> genLine("@3", "D=A+D")
+            "temp" -> genLine("@5", "D=A+D")
+            else -> throw IllegalArgumentException()
         }
-        return defIndex(index) + command + setToRegister("R13") + pop() + loadRegister("R13") + "M=D\n"
+        return genLine("@$index", "D=A", command, "@R13", "M=D", "", pop(), "@R13", "A=M", "", "M=D")
+
     }
 
-    private fun popToStatic(index: Int) = pop() + "@$fileName.$index\nM=D\n"
-
-    private fun pop() = decrementSP() + loadSP() + "D=M\nM=0\n"
-
-    private fun pushConst(const: Int) = defIndex(const) + push()
-
+    private fun pushConst(const: Int) = genLine("@$const", "D=A") + push()
     private fun pushSegment(segment: String, index: Int): String {
         val command = when (segment) {
-            "argument" -> loadArg()
-            "local" -> loadLcl()
-            "this" -> loadThis()
-            "that" -> loadThat()
+            "argument" -> genLine("@ARG", "A=M+D", "D=M")
+            "local" -> genLine("@LCL", "A=M+D", "D=M")
+            "this" -> genLine("@THIS", "A=M+D", "D=M")
+            "that" -> genLine("@THAT", "A=M+D", "D=M")
             else -> throw IllegalArgumentException()
         }
 
-        return defIndex(index) + command + push()
+        return genLine("@$index", "D=A",command,push())
     }
 
     private fun pushTempOrPointer(segment: String, index: Int): String {
         val command = when (segment) {
-            "pointer" -> loadPointer(index)
-            "temp" -> loadTemp(index)
+            "pointer" -> genLine("@${3 + index}", "D=M")
+            "temp" -> genLine("@${5 + index}", "D=M")
             else -> throw IllegalArgumentException()
         }
 
         return command + push()
     }
 
-    private fun pushStatic(index: Int) = "@$fileName.$index\nD=M\n" + push()
-
-    private fun push() = loadSP() + "M=D\n" + incrementSP()
-
-    private fun add() = "M=M+D\n"
-    private fun sub() = "M=M-D\n"
-    private fun neg() = "M=-M\n"
-    private fun and() = "M=D&M\n"
-    private fun or() = "M=D|M\n"
-    private fun not() = "M=!M\n"
     private fun eq(): String {
-        val command =
-            "D=M-D\n@EQ$eqNum\nD;JEQ\n@NEQ$eqNum\n0;JMP\n(EQ$eqNum)\n${loadSP()}M=-1\n@EQNEXT$eqNum\n0;JMP\n(NEQ$eqNum)\n${loadSP()}M=0\n@EQNEXT$eqNum\n0;JMP\n(EQNEXT$eqNum)\n"
+        val command = genLine(
+            "D=M-D",
+            "@EQ$eqNum",
+            "D;JEQ",
+            "@NEQ$eqNum",
+            "0;JMP",
+            "(EQ$eqNum)",
+            loadSP(),
+            "M=-1",
+            "@EQNEXT$eqNum",
+            "0;JMP",
+            "(NEQ$eqNum)",
+            loadSP(),
+            "M=0",
+            "@EQNEXT$eqNum",
+            "0;JMP",
+            "(EQNEXT$eqNum)"
+        )
         eqNum++
         return command
     }
 
     private fun gt(): String {
-        val command =
-            "D=M-D\n@GT$gtNum\nD;JGT\n@NGT$gtNum\n0;JMP\n(GT$gtNum)\n${loadSP()}M=-1\n@GTNEXT$gtNum\n0;JMP\n(NGT$gtNum)\n${loadSP()}M=0\n@GTNEXT$gtNum\n0;JMP\n(GTNEXT$gtNum)\n"
+        val command = genLine(
+            "D=M-D",
+            "@GT$gtNum",
+            "D;JGT",
+            "@NGT$gtNum",
+            "0;JMP",
+            "(GT$gtNum)",
+            loadSP(),
+            "M=-1",
+            "@GTNEXT$gtNum",
+            "0;JMP",
+            "(NGT$gtNum)",
+            loadSP(),
+            "M=0",
+            "@GTNEXT$gtNum",
+            "0;JMP",
+            "(GTNEXT$gtNum)"
+        )
         gtNum++
         return command
     }
 
     private fun lt(): String {
-        val command =
-            "D=M-D\n@LT$ltNum\nD;JLT\n@NLT$ltNum\n0;JMP\n(LT$ltNum)\n${loadSP()}M=-1\n@LTNEXT$ltNum\n0;JMP\n(NLT$ltNum)\n${loadSP()}M=0\n@LTNEXT$ltNum\n0;JMP\n(LTNEXT$ltNum)\n"
+        val command = genLine(
+            "D=M-D",
+            "@LT$ltNum",
+            "D;JLT",
+            "@NLT$ltNum",
+            "0;JMP",
+            "(LT$ltNum)",
+            loadSP(),
+            "M=-1",
+            "@LTNEXT$ltNum",
+            "0;JMP",
+            "(NLT$ltNum)",
+            loadSP(),
+            "M=0",
+            "@LTNEXT$ltNum",
+            "0;JMP",
+            "(LTNEXT$ltNum)"
+        )
         ltNum++
         return command
     }
+
+    private fun genLine(vararg commands: String): String =
+        commands.joinToString(separator = "\n", postfix = "\n") { it.replace("(\\n)+$".toRegex(), "") }
 }
