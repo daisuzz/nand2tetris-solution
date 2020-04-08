@@ -10,6 +10,8 @@ class CodeWriter(private val file: File) {
 
     private var fileName = ""
 
+    private var returnAddressCounter = 0
+
     /**
      * 新しいVMファイルの変換が開始したことを知らせる
      */
@@ -23,28 +25,28 @@ class CodeWriter(private val file: File) {
     fun writeArithmetic(command: String) {
         val assemblyCode = when (command) {
             "add" -> {
-                decrementSP() + loadSP() + pop() + decrementSP() + loadSP() + add() + incrementSP()
+                pop() + decrementSP() + loadSP() + add() + incrementSP()
             }
             "sub" -> {
-                decrementSP() + loadSP() + pop() + decrementSP() + loadSP() + sub() + incrementSP()
+                pop() + decrementSP() + loadSP() + sub() + incrementSP()
             }
             "neg" -> {
                 decrementSP() + loadSP() + neg() + incrementSP()
             }
             "eq" -> {
-                decrementSP() + loadSP() + pop() + decrementSP() + loadSP() + eq() + incrementSP()
+                pop() + decrementSP() + loadSP() + eq() + incrementSP()
             }
             "gt" -> {
-                decrementSP() + loadSP() + pop() + decrementSP() + loadSP() + gt() + incrementSP()
+                pop() + decrementSP() + loadSP() + gt() + incrementSP()
             }
             "lt" -> {
-                decrementSP() + loadSP() + pop() + decrementSP() + loadSP() + lt() + incrementSP()
+                pop() + decrementSP() + loadSP() + lt() + incrementSP()
             }
             "and" -> {
-                decrementSP() + loadSP() + pop() + decrementSP() + loadSP() + and() + incrementSP()
+                pop() + decrementSP() + loadSP() + and() + incrementSP()
             }
             "or" -> {
-                decrementSP() + loadSP() + pop() + decrementSP() + loadSP() + or() + incrementSP()
+                pop() + decrementSP() + loadSP() + or() + incrementSP()
             }
             "not" -> {
                 decrementSP() + loadSP() + not() + incrementSP()
@@ -82,7 +84,10 @@ class CodeWriter(private val file: File) {
      * VMの初期化を行うアセンブリコードをファイルに書き込む
      */
     fun writeInit() {
-        TODO()
+        var assemblyCode = "@256\nD=A\n@SP\nM=D\n"
+
+        file.appendText(assemblyCode)
+        writeCall("Sys.init", 0)
     }
 
     /**
@@ -105,29 +110,86 @@ class CodeWriter(private val file: File) {
      * if-gotoコマンドをアセンブリコードに変換し、ファイルに書き込む
      */
     fun writeIf(label: String) {
-        val assemblyCode = decrementSP() + loadSP() + pop() + "@$fileName$$label\nD;JNE\n"
+        val assemblyCode = pop() + "@$fileName$$label\nD;JNE\n"
         file.appendText(assemblyCode)
-    }
-
-    /**
-     * callコマンドをアセンブリコードに変換し、ファイルに書き込む
-     */
-    fun writeCall(functionName: String, numArgs: Int) {
-        TODO()
-    }
-
-    /**
-     * returnコマンドをアセンブリコードに変換し、ファイルに書き込む
-     */
-    fun writeReturn() {
-        TODO()
     }
 
     /**
      * functionコマンドをアセンブリコードに変換し、ファイルに書き込む
      */
     fun writeFunction(functionName: String, numLocals: Int) {
-        TODO()
+        var assemblyCode = "($functionName)\n"
+        (0 until numLocals).forEach { _ ->
+            assemblyCode += pushConst(0)
+        }
+        file.appendText(assemblyCode)
+    }
+
+
+    /**
+     * callコマンドをアセンブリコードに変換し、ファイルに書き込む
+     */
+    fun writeCall(functionName: String, numArgs: Int) {
+        var assemblyCode = ""
+
+        // push return-address
+        assemblyCode += "@return-address$returnAddressCounter\nD=A\n" + push()
+        // push LCL
+        assemblyCode += "@LCL\nD=M\n" + push()
+        // push ARG
+        assemblyCode += "@ARG\nD=M\n" + push()
+        // push THIS
+        assemblyCode += "@THIS\nD=M\n" + push()
+        // push THAT
+        assemblyCode += "@THAT\nD=M\n" + push()
+        // ARG = SP-n-5
+        assemblyCode += "@SP\nD=M\n@$numArgs\nD=D-A\n@5\nD=D-A\n@ARG\nM=D\n"
+        // LCL = SP
+        assemblyCode += "@SP\nD=M\n@LCL\nM=D\n"
+        // goto f
+        assemblyCode += "@$functionName\n0;JMP\n"
+        // (return-address)
+        assemblyCode += "(return-address$returnAddressCounter)\n"
+
+        file.appendText(assemblyCode)
+
+        returnAddressCounter++
+    }
+
+    /**
+     * returnコマンドをアセンブリコードに変換し、ファイルに書き込む
+     */
+    fun writeReturn() {
+        var assemblyCode = ""
+
+        // FRAMEのベースアドレスをLCLから取得
+        assemblyCode += "@LCL\nD=M\n@frame\nM=D\n"
+
+        // リターンアドレスをLCLから取得
+        assemblyCode += "@5\nD=A\n@frame\nA=M-D\nD=M\n@ret\nM=D\n"
+
+        // 関数の戻り値を呼び出し元のスタックに格納(argument[0]は呼び出し元ではスタックの最上位になる)
+        assemblyCode += pop() + "@ARG\nA=M\nM=D\n"
+
+        // SPを呼び出し元のSPに戻す
+        assemblyCode += "@ARG\nD=M\n@SP\nM=D+1\n"
+
+        // THATを呼び出し元のTHATに戻す
+        assemblyCode += "@frame\nA=M-1\nD=M\n@THAT\nM=D\n"
+
+        // THISを呼び出し元のTHISに戻す
+        assemblyCode += "@2\nD=A\n@frame\nA=M-D\nD=M\n@THIS\nM=D\n"
+
+        // ARGを呼び出し元のARGに戻す
+        assemblyCode += "@3\nD=A\n@frame\nA=M-D\nD=M\n@ARG\nM=D\n"
+
+        // LCLを呼び出し元のLCLに戻す
+        assemblyCode += "@4\nD=A\n@frame\nA=M-D\nD=M\n@LCL\nM=D\n"
+
+        // リターンアドレスにjump
+        assemblyCode += "@ret\nA=M\n0;JMP\n"
+
+        file.appendText(assemblyCode)
     }
 
     /**
@@ -168,17 +230,14 @@ class CodeWriter(private val file: File) {
             "temp" -> loadTempAddr()
             else -> IllegalArgumentException()
         }
-        return defIndex(index) + command + setToRegister("R13") + decrementSP() + loadSP() + pop() + loadRegister("R13") + "M=D\n"
+        return defIndex(index) + command + setToRegister("R13") + pop() + loadRegister("R13") + "M=D\n"
     }
 
-    private fun popToStatic(index: Int): String {
-        return decrementSP() + loadSP() + pop() + "@$fileName.$index\nM=D\n"
+    private fun popToStatic(index: Int) = pop() + "@$fileName.$index\nM=D\n"
 
-    }
+    private fun pop() = decrementSP() + loadSP() + "D=M\nM=0\n"
 
-    private fun pop() = "D=M\nM=0\n"
-
-    private fun pushConst(const: Int) = defIndex(const) + push() + incrementSP()
+    private fun pushConst(const: Int) = defIndex(const) + push()
 
     private fun pushSegment(segment: String, index: Int): String {
         val command = when (segment) {
@@ -189,7 +248,7 @@ class CodeWriter(private val file: File) {
             else -> throw IllegalArgumentException()
         }
 
-        return defIndex(index) + command + push() + incrementSP()
+        return defIndex(index) + command + push()
     }
 
     private fun pushTempOrPointer(segment: String, index: Int): String {
@@ -199,12 +258,12 @@ class CodeWriter(private val file: File) {
             else -> throw IllegalArgumentException()
         }
 
-        return command + push() + incrementSP()
+        return command + push()
     }
 
-    private fun pushStatic(index: Int) = "@$fileName.$index\nD=M\n" + push() + incrementSP()
+    private fun pushStatic(index: Int) = "@$fileName.$index\nD=M\n" + push()
 
-    private fun push() = loadSP() + "M=D\n"
+    private fun push() = loadSP() + "M=D\n" + incrementSP()
 
     private fun add() = "M=M+D\n"
     private fun sub() = "M=M-D\n"
