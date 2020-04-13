@@ -61,8 +61,10 @@ class JackTokenizer(inputFile: File) {
      * 入力.jackファイルを読み込み、トークンの一覧を生成してnuxtTokenListに追加する
      */
     init {
+        var isMultiComment = false
         var line = nextLine()
         while (line != null) {
+            var hasTokenBeforeComment = false
             if (line.isEmpty()) {
                 line = nextLine()
                 continue
@@ -70,14 +72,32 @@ class JackTokenizer(inputFile: File) {
             val commentStartIdx = line.indexOf("/*")
             val commentEndIdx = line.indexOf("*/")
 
+            // 複数行のコメントが/*で閉じられている場合
+            if (commentStartIdx != -1 && commentEndIdx == -1) {
+                line = line.substringBefore("/*")
+                isMultiComment = true
+                if (line.isNotEmpty()) hasTokenBeforeComment = true
+                if (line.isEmpty()) {
+                    line = nextLine()
+                    continue
+                }
+            }
+
+            // 複数行のコメントが*/で閉じられている場合
+            if (commentStartIdx == -1 && commentEndIdx != -1) {
+                line = line.substringAfter("*/")
+                isMultiComment = false
+            }
+
+            // /**/を使ったコメントが1行で書かれている場合
             if (commentStartIdx != -1 && commentEndIdx != -1) {
                 line = line.replaceRange(commentStartIdx, commentEndIdx + 2, "")
             }
-            if (commentStartIdx != -1 && commentEndIdx == -1) {
-                line = line.substringBefore("/*")
-            }
-            if (commentStartIdx == -1 && commentEndIdx != -1) {
-                line = line.substringAfter("*/")
+
+            // 複数行のコメントで/**/を含まない場合
+            if (isMultiComment && !hasTokenBeforeComment) {
+                line = nextLine()
+                continue
             }
 
             val doubleQuoteSegments = line.split("\"")
