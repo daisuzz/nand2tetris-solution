@@ -7,28 +7,31 @@ fun main(vararg args: String) {
     val source = File(args[0])
     if (source.isDirectory) {
         val jackFiles = source.listFiles { file -> file.extension == "jack" } ?: throw IllegalArgumentException()
-        jackFiles.forEach { inputFile ->
-            val outputFile = File(inputFile.parent + "/" + inputFile.nameWithoutExtension + ".xml")
-            if (outputFile.exists()) outputFile.delete()
-            tokenize(inputFile, outputFile)
-        }
+        jackFiles.forEach { inputFile -> compile(inputFile) }
     } else {
-        val outputFile = File(source.parent + "/" + source.nameWithoutExtension + ".xml")
-        if (outputFile.exists()) outputFile.delete()
-        tokenize(source, outputFile)
+        compile(source)
     }
 }
 
-fun tokenize(inputFile: File, outputFile: File) {
+fun compile(inputFile: File) {
+    val tempFile = File(inputFile.parent + "/" + inputFile.nameWithoutExtension + "T.xml")
+    if (tempFile.exists()) tempFile.delete()
+    val outputFile = File(inputFile.parent + "/" + inputFile.nameWithoutExtension + ".xml")
+    if (outputFile.exists()) outputFile.delete()
+    val compiler = CompilationEngine(JackTokenizer(inputFile), outputFile)
+    compiler.compileClass()
+}
+
+fun tokenize(inputFile: File, tempFile: File) {
     val tokenizer = JackTokenizer(inputFile)
 
-    outputFile.writeWithLF("<tokens>")
+    tempFile.writeWithLF("<tokens>")
     while (tokenizer.hasMoreTokens()) {
         tokenizer.advance()
         when (tokenizer.tokenType()) {
             TokenType.KEYWORD -> {
                 val input = tokenizer.keyword()
-                outputFile.writeWithLF("<keyword> $input </keyword>")
+                tempFile.writeWithLF("<keyword> $input </keyword>")
             }
             TokenType.SYMBOL -> {
                 val input = when (val symbol = tokenizer.symbol()) {
@@ -37,25 +40,21 @@ fun tokenize(inputFile: File, outputFile: File) {
                     '&' -> "&amp;"
                     else -> symbol.toString()
                 }
-                outputFile.writeWithLF("<symbol> $input </symbol>")
+                tempFile.writeWithLF("<symbol> $input </symbol>")
             }
             TokenType.INT_CONST -> {
                 val input = tokenizer.intVal()
-                outputFile.writeWithLF("<integerConstant> $input </integerConstant>")
+                tempFile.writeWithLF("<integerConstant> $input </integerConstant>")
             }
             TokenType.STRING_CONST -> {
                 val input = tokenizer.stringVal()
-                outputFile.writeWithLF("<stringConstant> $input </stringConstant>")
+                tempFile.writeWithLF("<stringConstant> $input </stringConstant>")
             }
             TokenType.IDENTIFIER -> {
                 val input = tokenizer.identifier()
-                outputFile.writeWithLF("<identifier> $input </identifier>")
+                tempFile.writeWithLF("<identifier> $input </identifier>")
             }
         }
     }
-    outputFile.writeWithLF("</tokens>")
-}
-
-private fun File.writeWithLF(text: String) {
-    this.appendText("$text\n")
+    tempFile.writeWithLF("</tokens>")
 }
