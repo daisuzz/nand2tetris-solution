@@ -2,7 +2,9 @@ package compiler
 
 import java.io.File
 
-class CompilationEngine(val tokenizer: JackTokenizer, val outputFile: File) {
+class CompilationEngine(inputFile: File, private val outputFile: File) {
+
+    private val tokenizer = JackTokenizer(inputFile)
 
     private val opeSet: Set<String> = setOf("+", "-", "*", "/", "&", "|", "<", ">", "=")
 
@@ -124,10 +126,6 @@ class CompilationEngine(val tokenizer: JackTokenizer, val outputFile: File) {
         outputFile.writeWithLF(genEndTag(TagName.SUBROUTINE_DEC.value))
     }
 
-    /**
-     * init -> type or )
-     * end -> )
-     */
     private fun compileParameterList() {
         outputFile.writeWithLF(genStartTag(TagName.PARAMETER_LIST.value))
         if (tokenizer.tokenType() == TokenType.SYMBOL && tokenizer.symbol() == ')') {
@@ -196,10 +194,6 @@ class CompilationEngine(val tokenizer: JackTokenizer, val outputFile: File) {
         outputFile.writeWithLF(genEndTag(TagName.VAR_DEC.value))
     }
 
-    /**
-     * init -> let, if, while, do, return
-     * end -> ;
-     */
     private fun compileStatements() {
         outputFile.writeWithLF(genStartTag(TagName.STATEMENTS.value))
         loop@ while (tokenizer.hasMoreTokens()) {
@@ -224,10 +218,6 @@ class CompilationEngine(val tokenizer: JackTokenizer, val outputFile: File) {
         outputFile.writeWithLF(genEndTag(TagName.STATEMENTS.value))
     }
 
-    /**
-     * init -> let
-     * end -> ;
-     */
     private fun compileLet() {
         outputFile.writeWithLF(genStartTag(TagName.LET_STATEMENT.value))
         outputFile.writeWithLF(wrapWithTag(TagName.KEYWORD, tokenizer.keyword()))
@@ -263,10 +253,6 @@ class CompilationEngine(val tokenizer: JackTokenizer, val outputFile: File) {
         outputFile.writeWithLF(genEndTag(TagName.LET_STATEMENT.value))
     }
 
-    /**
-     * init -> if
-     * end -> }
-     */
     private fun compileIf() {
         outputFile.writeWithLF(genStartTag(TagName.IF_STATEMENT.value))
         outputFile.writeWithLF(wrapWithTag(TagName.KEYWORD, tokenizer.keyword()))
@@ -309,10 +295,6 @@ class CompilationEngine(val tokenizer: JackTokenizer, val outputFile: File) {
         outputFile.writeWithLF(genEndTag(TagName.IF_STATEMENT.value))
     }
 
-    /**
-     * init -> do
-     * end -> ;
-     */
     private fun compileDo() {
         outputFile.writeWithLF(genStartTag(TagName.DO_STATEMENT.value))
         outputFile.writeWithLF(wrapWithTag(TagName.KEYWORD, tokenizer.keyword()))
@@ -366,10 +348,6 @@ class CompilationEngine(val tokenizer: JackTokenizer, val outputFile: File) {
         outputFile.writeWithLF(genEndTag(TagName.DO_STATEMENT.value))
     }
 
-    /**
-     * init -> while
-     * end -> }
-     */
     private fun compileWhile() {
         outputFile.writeWithLF(genStartTag(TagName.WHILE_STATEMENT.value))
         outputFile.writeWithLF(wrapWithTag(TagName.KEYWORD, tokenizer.keyword()))
@@ -418,10 +396,6 @@ class CompilationEngine(val tokenizer: JackTokenizer, val outputFile: File) {
         outputFile.writeWithLF(genEndTag(TagName.RETURN_STATEMENT.value))
     }
 
-    /**
-     * init -> termの先頭
-     * end -> termの最後
-     */
     private fun compileExpression() {
         outputFile.writeWithLF(genStartTag(TagName.EXPRESSION.value))
         compileTerm()
@@ -435,10 +409,6 @@ class CompilationEngine(val tokenizer: JackTokenizer, val outputFile: File) {
         outputFile.writeWithLF(genEndTag(TagName.EXPRESSION.value))
     }
 
-    /**
-     * init -> (
-     * end -> expressionの最後
-     */
     private fun compileExpressionList() {
         outputFile.writeWithLF(genStartTag(TagName.EXPRESSION_LIST.value))
         if (tokenizer.nextToken() == ")" || tokenizer.nextToken() == "]") {
@@ -457,10 +427,6 @@ class CompilationEngine(val tokenizer: JackTokenizer, val outputFile: File) {
         outputFile.writeWithLF(genEndTag(TagName.EXPRESSION_LIST.value))
     }
 
-    /**
-     * init -> termの先頭
-     * end -> termの最後
-     */
     private fun compileTerm() {
         outputFile.writeWithLF(genStartTag(TagName.TERM.value))
         when (tokenizer.tokenType()) {
@@ -530,7 +496,9 @@ class CompilationEngine(val tokenizer: JackTokenizer, val outputFile: File) {
     }
 
     private fun genStartTag(str: String) = "<$str>"
+
     private fun genEndTag(str: String) = "</$str>"
+
     private fun wrapWithTag(tagName: TagName, value: String): String {
         return genStartTag(tagName.value) + value + genEndTag(tagName.value)
     }
