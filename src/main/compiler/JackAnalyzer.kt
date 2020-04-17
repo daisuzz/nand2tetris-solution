@@ -18,7 +18,7 @@ fun compile(inputFile: File) {
     if (tempFile.exists()) tempFile.delete()
     val outputFile = File(inputFile.parent + "/" + inputFile.nameWithoutExtension + ".xml")
     if (outputFile.exists()) outputFile.delete()
-    val compiler = CompilationEngine(JackTokenizer(inputFile), outputFile)
+    val compiler = CompilationEngine(inputFile, outputFile)
     compiler.compileClass()
 }
 
