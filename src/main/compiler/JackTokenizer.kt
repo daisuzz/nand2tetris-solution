@@ -139,6 +139,11 @@ class JackTokenizer(inputFile: File) {
         return nextTokenList.isNotEmpty()
     }
 
+
+    fun nextToken(): String {
+        return nextTokenList.first()
+    }
+
     /**
      * 入力から次のトークンを取得し、それを現在のトークンとする。
      * このルーチンは、hasMoreTokens()がtrueの場合のみ呼び出すことができる。
