@@ -1,4 +1,4 @@
-package compiler
+package compiler.generator
 
 enum class TagName(val value: String) {
 
