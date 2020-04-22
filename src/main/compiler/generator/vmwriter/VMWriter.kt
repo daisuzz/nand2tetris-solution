@@ -24,15 +24,15 @@ class VMWriter(syntaxTree: File) {
     }
 
     fun writeLabel(label: String) {
-
+        outputFile.writeWithLF("label $label")
     }
 
     fun writeGoto(label: String) {
-
+        outputFile.writeWithLF("goto $label")
     }
 
     fun writeIf(label: String) {
-
+        outputFile.writeWithLF("if-goto $label")
     }
 
     fun writeCall(name: String, nArgs: Int) {
