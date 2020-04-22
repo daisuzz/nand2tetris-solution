@@ -1,0 +1,165 @@
+<class>
+<keyword>class</keyword>
+<identifier>Main, class</identifier>
+<symbol>{</symbol>
+<subroutineDec>
+<keyword>function</keyword>
+<keyword>void</keyword>
+<identifier>main, subroutine</identifier>
+<symbol>(</symbol>
+<parameterList>
+</parameterList>
+<symbol>)</symbol>
+<subroutineBody>
+<symbol>{</symbol>
+<keyword>int</keyword>
+<identifier>value, var, defined, var, 0</identifier>
+<symbol>;</symbol>
+</varDec>
+<statements>
+<identifier>Main, class</identifier>
+<expressionList>
+<expression>
+<term>
+<integerConstant>8001</integerConstant>
+</term>
+</expression>
+<symbol>,</symbol>
+<expression>
+<term>
+<integerConstant>16</integerConstant>
+</term>
+</expression>
+<symbol>,</symbol>
+<expression>
+<term>
+<symbol>-</symbol>
+<term>
+<integerConstant>1</integerConstant>
+</term>
+</term>
+</expression>
+</expressionList>
+<identifier>value, VAR, used, VAR, 0</identifier>
+<symbol>=</symbol>
+<expression>
+<term>
+<identifier>Memory, class</identifier>
+<symbol>.</symbol>
+<identifier>peek, subroutine</identifier>
+<symbol>(</symbol>
+<expressionList>
+<expression>
+<term>
+<integerConstant>8000</integerConstant>
+</term>
+</expression>
+</expressionList>
+<symbol>)</symbol>
+</term>
+</expression>
+<symbol>;</symbol>
+</letStatement>
+<identifier>Main, class</identifier>
+<expressionList>
+<expression>
+<term>
+</term>
+</expression>
+</expressionList>
+<returnStatement>
+<keyword>return</keyword>
+<symbol>;</symbol>
+</returnStatement>
+</statements>
+<symbol>}</symbol>
+</subroutineBody>
+</subroutineDec>
+<subroutineDec>
+<keyword>function</keyword>
+<keyword>void</keyword>
+<identifier>convert, subroutine</identifier>
+<symbol>(</symbol>
+<parameterList>
+<keyword>int</keyword>
+<identifier>value, argument, used, ARG, 0</identifier>
+</parameterList>
+<symbol>)</symbol>
+<subroutineBody>
+<symbol>{</symbol>
+<keyword>int</keyword>
+<identifier>mask, var, defined, var, 0</identifier>
+<symbol>,</symbol>
+<identifier>position, var, defined, var, 1</identifier>
+<symbol>;</symbol>
+</varDec>
+<keyword>boolean</keyword>
+<identifier>loop, var, defined, var, 2</identifier>
+<symbol>;</symbol>
+</varDec>
+<statements>
+<identifier>loop, VAR, used, VAR, 2</identifier>
+<symbol>=</symbol>
+<expression>
+<term>
+<keyword>true</keyword>
+</term>
+</expression>
+<symbol>;</symbol>
+</letStatement>
+<whileStatement>
+<keyword>while</keyword>
+<symbol>(</symbol>
+<expression>
+<term>
+</term>
+</expression>
+<symbol>)</symbol>
+<symbol>{</symbol>
+<statements>
+<identifier>position, VAR, used, VAR, 1</identifier>
+<symbol>=</symbol>
+<expression>
+<term>
+</term>
+<symbol>+</symbol>
+<term>
+<integerConstant>1</integerConstant>
+</term>
+</expression>
+<symbol>;</symbol>
+</letStatement>
+<identifier>mask, VAR, used, VAR, 0</identifier>
+<symbol>=</symbol>
+<expression>
+<term>
+<identifier>Main, class</identifier>
+<symbol>.</symbol>
+<identifier>nextMask, subroutine</identifier>
+<symbol>(</symbol>
+<expressionList>
+<expression>
+<term>
+</term>
+</expression>
+</expressionList>
+<symbol>)</symbol>
+</term>
+</expression>
+<symbol>;</symbol>
+</letStatement>
+<ifStatement>
+<keyword>if</keyword>
+<symbol>(</symbol>
+<expression>
+<term>
+<symbol>~</symbol>
+<term>
+<symbol>(</symbol>
+<expression>
+<term>
+</term>
+<symbol>&gt;</symbol>
+<term>
+<integerConstant>16</integerConstant>
+</term>
