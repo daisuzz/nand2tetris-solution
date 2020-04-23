@@ -478,7 +478,7 @@ class CompilationEngine(inputFile: File, private val outputFile: File) {
                         vmWriter.writePush(Segment.POINTER, 0)
                     }
                     "null" -> {
-                        outputFile.writeWithLF(wrapWithTag(TagName.KEYWORD, keyword))
+                        vmWriter.writePush(Segment.CONST, 0)
                     }
                     else -> throw IllegalArgumentException()
                 }
@@ -554,7 +554,12 @@ class CompilationEngine(inputFile: File, private val outputFile: File) {
                     else -> {
                         when (symbolTable.kindOf(tokenizer.identifier())) {
                             Kind.ARG -> {
-                                vmWriter.writePush(Segment.ARG, symbolTable.indexOf(tokenizer.identifier()))
+                                val index = if(currentSubroutineKind == "method"){
+                                    symbolTable.indexOf(tokenizer.identifier()) + 1
+                                }else{
+                                    symbolTable.indexOf(tokenizer.identifier())
+                                }
+                                vmWriter.writePush(Segment.ARG, index)
                             }
                             Kind.VAR -> {
                                 vmWriter.writePush(Segment.LOCAL, symbolTable.indexOf(tokenizer.identifier()))
