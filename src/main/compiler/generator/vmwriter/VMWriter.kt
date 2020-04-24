@@ -3,13 +3,7 @@ package compiler.generator.vmwriter
 import compiler.parser.writeWithLF
 import java.io.File
 
-class VMWriter(syntaxTree: File) {
-
-    private var outputFile: File = File(syntaxTree.parent + "/" + syntaxTree.nameWithoutExtension + ".vm")
-
-    init {
-        if (outputFile.exists()) outputFile.delete()
-    }
+class VMWriter(private val outputFile: File) {
 
     fun writePush(segment: Segment, index: Int) {
         outputFile.writeWithLF("push ${segment.value} $index")
@@ -20,7 +14,7 @@ class VMWriter(syntaxTree: File) {
     }
 
     fun writeArithmetic(command: Command) {
-        outputFile.writeWithLF("${command.name.toLowerCase()}")
+        outputFile.writeWithLF(command.name.toLowerCase())
     }
 
     fun writeLabel(label: String) {
@@ -45,9 +39,5 @@ class VMWriter(syntaxTree: File) {
 
     fun writeReturn() {
         outputFile.writeWithLF("return")
-    }
-
-    fun close() {
-
     }
 }

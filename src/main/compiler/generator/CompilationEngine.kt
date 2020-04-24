@@ -7,7 +7,7 @@ import compiler.symboltable.Kind
 import compiler.symboltable.SymbolTable
 import java.io.File
 
-class CompilationEngine(inputFile: File, private val outputFile: File) {
+class CompilationEngine(inputFile: File, outputFile: File) {
 
     private val tokenizer = JackTokenizer(inputFile)
 
@@ -34,8 +34,6 @@ class CompilationEngine(inputFile: File, private val outputFile: File) {
     private var ifLabel = 0
 
     fun compileClass() {
-        outputFile.writeWithLF(genStartTag(TagName.CLASS.value))
-
         loop@ while (tokenizer.hasMoreTokens()) {
             tokenizer.advance()
             when (tokenizer.tokenType()) {
@@ -93,9 +91,6 @@ class CompilationEngine(inputFile: File, private val outputFile: File) {
             when (tokenizer.tokenType()) {
                 TokenType.KEYWORD -> {
                     when (val keyword = tokenizer.keyword()) {
-                        "void", "int", "char", "boolean" -> {
-                            outputFile.writeWithLF(wrapWithTag(TagName.KEYWORD, keyword))
-                        }
                         in statementSet -> {
                             vmWriter.writeFunction("$className.$subroutineName", symbolTable.varCount(Kind.VAR))
                             if (currentSubroutineKind == "constructor") {
@@ -112,7 +107,6 @@ class CompilationEngine(inputFile: File, private val outputFile: File) {
                         "var" -> {
                             compileVarDec()
                         }
-                        else -> throw IllegalArgumentException()
                     }
                 }
                 TokenType.SYMBOL -> {
@@ -158,9 +152,7 @@ class CompilationEngine(inputFile: File, private val outputFile: File) {
                 }
                 TokenType.SYMBOL -> {
                     when (val symbol = tokenizer.symbol()) {
-                        ',' -> outputFile.writeWithLF(wrapWithTag(TagName.SYMBOL, symbol.toString()))
                         ')' -> break@loop
-                        else -> throw IllegalArgumentException()
                     }
                 }
                 TokenType.IDENTIFIER -> {
@@ -173,7 +165,6 @@ class CompilationEngine(inputFile: File, private val outputFile: File) {
                 else -> throw IllegalArgumentException()
             }
         }
-        outputFile.writeWithLF(genEndTag(TagName.PARAMETER_LIST.value))
     }
 
     private fun compileVarDec() {
@@ -558,9 +549,9 @@ class CompilationEngine(inputFile: File, private val outputFile: File) {
                     else -> {
                         when (symbolTable.kindOf(tokenizer.identifier())) {
                             Kind.ARG -> {
-                                val index = if(currentSubroutineKind == "method"){
+                                val index = if (currentSubroutineKind == "method") {
                                     symbolTable.indexOf(tokenizer.identifier()) + 1
-                                }else{
+                                } else {
                                     symbolTable.indexOf(tokenizer.identifier())
                                 }
                                 vmWriter.writePush(Segment.ARG, index)
@@ -595,10 +586,5 @@ class CompilationEngine(inputFile: File, private val outputFile: File) {
     }
 
     private fun genStartTag(str: String) = "<$str>"
-
     private fun genEndTag(str: String) = "</$str>"
-
-    private fun wrapWithTag(tagName: TagName, value: String): String {
-        return genStartTag(tagName.value) + value + genEndTag(tagName.value)
-    }
 }
