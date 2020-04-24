@@ -1,4 +1,4 @@
-package compiler
+package compiler.parser
 
 enum class TokenType {
 
