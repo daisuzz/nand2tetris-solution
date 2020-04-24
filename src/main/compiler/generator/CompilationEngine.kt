@@ -238,7 +238,9 @@ class CompilationEngine(inputFile: File, private val outputFile: File) {
                             compileExpression()
                             tokenizer.advance()
                             vmWriter.writeArithmetic(Command.ADD)
-                            vmWriter.writePop(Segment.POINTER, 1)
+
+                            // 右辺に配列が存在する場合を考慮して、指定したインデックスの要素を指すアドレスを退避
+                            vmWriter.writePop(Segment.TEMP, 1)
                         }
                         '=' -> {
                             tokenizer.advance()
@@ -251,6 +253,8 @@ class CompilationEngine(inputFile: File, private val outputFile: File) {
             }
         }
         if (isArrayAccess) {
+            vmWriter.writePush(Segment.TEMP, 1)
+            vmWriter.writePop(Segment.POINTER, 1)
             vmWriter.writePop(Segment.THAT, 0)
             return
         }
@@ -369,7 +373,7 @@ class CompilationEngine(inputFile: File, private val outputFile: File) {
         }
 
         vmWriter.writeCall(callSubroutineName, nArgs)
-        vmWriter.writePop(Segment.TEMP, 0)
+        vmWriter.writePop(Segment.TEMP, 2)
     }
 
     private fun compileWhile() {

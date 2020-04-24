@@ -90,7 +90,7 @@ push constant 0
 eq
 not
 if-goto while.exit.run.SquareGame1
-call Keyboard.keyPressed 1
+call Keyboard.keyPressed 0
 pop local 0
 push pointer 0
 call SquareGame.moveSquare 1
