@@ -10,6 +10,7 @@ class Keyboard {
 
     /** Initializes the keyboard. */
     function void init() {
+        return;
     } 
 
     /**
@@ -33,6 +34,14 @@ class Keyboard {
      * F1 - F12 = 141 - 152
      */
     function char keyPressed() {
+        var int key;
+
+        let key = Memory.peek(24576);
+        if(key = 0){
+            return 0;
+        }else{
+            return key;
+        }
     }
 
     /**								
@@ -41,6 +50,18 @@ class Keyboard {
      * of the pressed key.
      */
     function char readChar() {
+        var char c, currentChar;
+
+        let c = Keyboard.keyPressed();
+        while(c = 0){
+            let c = Keyboard.keyPressed();
+        }
+        let currentChar = c;
+        while(~(c = 0)){
+            let c = Keyboard.keyPressed();
+        }
+        do Output.printChar(currentChar);
+        return currentChar;
     }
 
     /**								
@@ -49,6 +70,23 @@ class Keyboard {
      * and returns its value. Also handles user backspaces.
      */
     function String readLine(String message) {
+        var char c;
+        var String s;
+
+        let s = String.new(50);
+        do Output.printString(message);
+        let c = Keyboard.readChar();
+        while(~(c = 128)){
+            // backspace pressed
+            if(c = 129){
+                do s.eraseLastChar();
+            }else{
+                do s.appendChar(c);
+            }
+            let c = Keyboard.readChar();
+        }
+        do Output.println();
+        return s;
     }   
 
     /**								
@@ -58,5 +96,21 @@ class Keyboard {
      * entered text is detected). Also handles user backspaces. 
      */
     function int readInt(String message) {
+        var char c;
+        var String s;
+
+        do Output.printString(message);
+        let c = Keyboard.readChar();
+        let s = String.new(50);
+        while(~(c = 128)){
+            if(c = 129){
+                do s.eraseLastChar();
+            }else{
+                do s.appendChar(c);
+            }
+            let c = Keyboard.readChar();
+        }
+        do Output.println();
+        return s.intValue();
     }
 }
