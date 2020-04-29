@@ -41,8 +41,8 @@ class Math {
         return x;
     }
 
-    /** Returns the product of x and y. 
-     *  When a Jack compiler detects the multiplication operator '*' in the 
+    /** Returns the product of x and y.
+     *  When a Jack compiler detects the multiplication operator '*' in the
      *  program's code, it handles it by invoking this method. In other words,
      *  the Jack expressions x*y and multiply(x,y) return the same value.
      */
@@ -62,7 +62,7 @@ class Math {
     }
 
     /** Returns the integer part of x/y.
-     *  When a Jack compiler detects the multiplication operator '/' in the 
+     *  When a Jack compiler detects the multiplication operator '/' in the
      *  program's code, it handles it by invoking this method. In other words,
      *  the Jack expressions x/y and divide(x,y) return the same value.
      */

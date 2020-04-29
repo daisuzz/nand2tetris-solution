@@ -84,7 +84,7 @@ class String {
             let v = v * 10 + d;
             let i = i + 1;
         }
-        if(arr[0] = '-'){
+        if(arr[0] = 45){
             return -v;
         }
         return v;
