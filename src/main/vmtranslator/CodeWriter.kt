@@ -12,18 +12,6 @@ class CodeWriter(private val file: File) {
 
     private var returnAddressCounter = 0
 
-    private val arithmeticMap = mapOf(
-        "add" to "M=M+D",
-        "sub" to "M=M-D",
-        "neg" to "M=-M",
-        "and" to "M=M&D",
-        "or" to "M=M|D",
-        "not" to "M=!M",
-        "eq" to eq(),
-        "gt" to gt(),
-        "lt" to lt()
-    )
-
     /**
      * 新しいVMファイルの変換が開始したことを知らせる
      */
@@ -35,8 +23,22 @@ class CodeWriter(private val file: File) {
      * 与えられた算術コマンドをアセンブリコードに変換し、ファイルに書き込む
      */
     fun writeArithmetic(operator: String) {
-        val commands = arithmeticMap[operator] ?: throw IllegalArgumentException()
-        val assemblyCode = genLine(pop(), decrementSP(), loadSP(), commands, incrementSP())
+        val commands = when (operator) {
+            "add" -> "M=M+D"
+            "sub" -> "M=M-D"
+            "neg" -> "M=-M"
+            "and" -> "M=M&D"
+            "or" -> "M=M|D"
+            "not" -> "M=!M"
+            "eq" -> eq()
+            "gt" -> gt()
+            "lt" -> lt()
+            else -> throw IllegalArgumentException()
+        }
+
+        val assemblyCode =
+            if (commands == "neg" || commands == "not") genLine(decrementSP(), loadSP(), operator, incrementSP())
+            else genLine(pop(), decrementSP(), loadSP(), operator, incrementSP())
 
         file.appendText(assemblyCode)
     }
@@ -212,7 +214,7 @@ class CodeWriter(private val file: File) {
             else -> throw IllegalArgumentException()
         }
 
-        return genLine("@$index", "D=A",command,push())
+        return genLine("@$index", "D=A", command, push())
     }
 
     private fun pushTempOrPointer(segment: String, index: Int): String {
